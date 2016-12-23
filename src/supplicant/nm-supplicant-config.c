@@ -28,7 +28,7 @@
 
 #include "nm-supplicant-settings-verify.h"
 #include "nm-setting.h"
-#include "nm-auth-subject.h"
+#include "nm-setting-connection.h"
 #include "NetworkManagerUtils.h"
 #include "nm-utils.h"
 
@@ -682,6 +682,7 @@ gboolean
 nm_supplicant_config_add_setting_wireless_security (NMSupplicantConfig *self,
                                                     NMSettingWirelessSecurity *setting,
                                                     NMSetting8021x *setting_8021x,
+                                                    NMSettingConnection *setting_con,
                                                     const char *con_uuid,
                                                     guint32 mtu,
                                                     GError **error)
@@ -806,8 +807,10 @@ nm_supplicant_config_add_setting_wireless_security (NMSupplicantConfig *self,
 				             "Cannot set key-mgmt %s with missing 8021x setting", key_mgmt);
 				return FALSE;
 			}
-			if (!nm_supplicant_config_add_setting_8021x (self, setting_8021x, con_uuid, mtu, FALSE, error))
+			if (!nm_supplicant_config_add_setting_8021x (self, setting_8021x, setting_con,
+			                                             con_uuid, mtu, FALSE, error)) {
 				return FALSE;
+			}
 		}
 
 		if (!strcmp (key_mgmt, "wpa-eap")) {
@@ -835,12 +838,14 @@ add_pkcs11_uri_with_pin (NMSupplicantConfig *self,
                          const char *uri,
                          const char *pin,
                          const NMSettingSecretFlags pin_flags,
+                         const char *p11_kit_remote,
                          GError **error)
 {
 	gs_strfreev gchar **split = NULL;
 	gs_free char *tmp = NULL;
 	gs_free char *tmp_log = NULL;
 	gs_free char *pin_qattr = NULL;
+	gs_free char *sock_qattr = NULL;
 	char *escaped = NULL;
 
 	if (uri == NULL)
@@ -853,20 +858,29 @@ add_pkcs11_uri_with_pin (NMSupplicantConfig *self,
 	if (split[1])
 		nm_log_info (LOGD_SUPPLICANT, "URI attributes ignored");
 
-	/* Fill in the PIN if required. */
+	/* Fill in the required attributes. */
 	if (pin) {
 		escaped = g_uri_escape_string (pin, NULL, TRUE);
 		pin_qattr = g_strdup_printf ("pin-value=%s", escaped);
 		g_free (escaped);
 	}
+	if (p11_kit_remote) {
+		escaped = g_uri_escape_string (p11_kit_remote, "/:", TRUE);
+		sock_qattr = g_strdup_printf ("p11-kit-remote=%s", escaped);
+		g_free (escaped);
+	}
 
-	tmp = g_strdup_printf ("%s%s%s", split[0],
-	                       (pin_qattr ? "&" : ""),
-	                       (pin_qattr ? pin_qattr : ""));
+	tmp = g_strdup_printf ("%s%s%s%s%s", split[0],
+	                       (pin_qattr ? "?" : ""),
+	                       (pin_qattr ? pin_qattr : ""),
+	                       (sock_qattr ? (pin_qattr ? "&" : "?") : ""),
+	                       (sock_qattr ? sock_qattr : ""));
 
-	tmp_log = g_strdup_printf ("%s%s%s", split[0],
-	                           (pin_qattr ? "&" : ""),
-	                           (pin_qattr ? "pin-value=<hidden>" : ""));
+	tmp_log = g_strdup_printf ("%s%s%s%s%s", split[0],
+	                           (pin_qattr ? "?" : ""),
+	                           (pin_qattr ? "pin-value=<hidden>" : ""),
+	                           (sock_qattr ? (pin_qattr ? "&" : "?") : ""),
+	                           (sock_qattr ? sock_qattr : ""));
 
 	return add_string_val (self, tmp, name, FALSE, tmp_log, error);
 }
@@ -874,6 +888,7 @@ add_pkcs11_uri_with_pin (NMSupplicantConfig *self,
 gboolean
 nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
                                         NMSetting8021x *setting,
+                                        NMSettingConnection *setting_con,
                                         const char *con_uuid,
                                         guint32 mtu,
                                         gboolean wired,
@@ -1080,6 +1095,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 			                              nm_setting_802_1x_get_ca_cert_uri (setting),
 			                              nm_setting_802_1x_get_private_key_password (setting),
 			                              nm_setting_802_1x_get_private_key_password_flags (setting),
+			                              nm_setting_connection_get_p11_kit_remote (setting_con),
 			                              error)) {
 				return FALSE;
 			}
@@ -1110,6 +1126,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 			                              nm_setting_802_1x_get_phase2_ca_cert_uri (setting),
 			                              nm_setting_802_1x_get_phase2_private_key_password (setting),
 			                              nm_setting_802_1x_get_phase2_private_key_password_flags (setting),
+			                              nm_setting_connection_get_p11_kit_remote (setting_con),
 			                              error)) {
 				return FALSE;
 			}
@@ -1161,6 +1178,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 		                              nm_setting_802_1x_get_private_key_uri (setting),
 		                              nm_setting_802_1x_get_phase2_private_key_password (setting),
 		                              nm_setting_802_1x_get_phase2_private_key_password_flags (setting),
+		                              nm_setting_connection_get_p11_kit_remote (setting_con),
 		                              error)) {
 			return FALSE;
 		}
@@ -1208,6 +1226,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 				                              nm_setting_802_1x_get_client_cert_uri (setting),
 				                              nm_setting_802_1x_get_private_key_password (setting),
 				                              nm_setting_802_1x_get_private_key_password_flags (setting),
+				                              nm_setting_connection_get_p11_kit_remote (setting_con),
 				                              error)) {
 					return FALSE;
 				}
@@ -1238,6 +1257,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 		                              nm_setting_802_1x_get_phase2_private_key_uri (setting),
 		                              nm_setting_802_1x_get_phase2_private_key_password (setting),
 		                              nm_setting_802_1x_get_phase2_private_key_password_flags (setting),
+		                              nm_setting_connection_get_p11_kit_remote (setting_con),
 		                              error)) {
 			return FALSE;
 		}
@@ -1285,6 +1305,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 				                              nm_setting_802_1x_get_phase2_client_cert_uri (setting),
 				                              nm_setting_802_1x_get_phase2_private_key_password (setting),
 				                              nm_setting_802_1x_get_phase2_private_key_password_flags (setting),
+				                              nm_setting_connection_get_p11_kit_remote (setting_con),
 				                              error)) {
 					return FALSE;
 				}

@@ -2426,15 +2426,18 @@ build_supplicant_config (NMDeviceWifi *self,
 	s_wireless_sec = nm_connection_get_setting_wireless_security (connection);
 	if (s_wireless_sec) {
 		NMSetting8021x *s_8021x;
+		NMSettingConnection *s_con;
 		const char *con_uuid = nm_connection_get_uuid (connection);
 		guint32 mtu = nm_platform_link_get_mtu (NM_PLATFORM_GET,
 		                                        nm_device_get_ifindex (NM_DEVICE (self)));
 
 		g_assert (con_uuid);
 		s_8021x = nm_connection_get_setting_802_1x (connection);
+		s_con = nm_connection_get_setting_connection (connection);
 		if (!nm_supplicant_config_add_setting_wireless_security (config,
 		                                                         s_wireless_sec,
 		                                                         s_8021x,
+		                                                         s_con,
 		                                                         con_uuid,
 		                                                         mtu,
 		                                                         error)) {
@@ -2685,7 +2688,8 @@ act_stage2_config (NMDevice *device, NMDeviceStateReason *reason)
 		set_powersave (device);
 
 	/* Build up the supplicant configuration */
-	config = build_supplicant_config (self, connection, nm_wifi_ap_get_freq (ap), &error);
+	config = build_supplicant_config (self, connection, nm_wifi_ap_get_freq (ap),
+	                                  &error);
 	if (config == NULL) {
 		_LOGE (LOGD_DEVICE | LOGD_WIFI,
 		       "Activation: (wifi) couldn't build wireless configuration: %s",

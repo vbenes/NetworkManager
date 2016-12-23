@@ -215,6 +215,7 @@ build_supplicant_config (NMDeviceMacsec *self, GError **error)
 	NMSupplicantConfig *config = NULL;
 	NMSettingMacsec *s_macsec;
 	NMSetting8021x *s_8021x;
+	NMSettingConnection *s_con;
 	NMConnection *connection;
 	const char *con_uuid;
 	guint32 mtu;
@@ -238,7 +239,8 @@ build_supplicant_config (NMDeviceMacsec *self, GError **error)
 
 	if (nm_setting_macsec_get_mode (s_macsec) == NM_SETTING_MACSEC_MODE_EAP) {
 		s_8021x = nm_connection_get_setting_802_1x (connection);
-		if (!nm_supplicant_config_add_setting_8021x (config, s_8021x, con_uuid, mtu, TRUE, error)) {
+		s_con = nm_connection_get_setting_connection (connection);
+		if (!nm_supplicant_config_add_setting_8021x (config, s_8021x, s_con, con_uuid, mtu, TRUE, error)) {
 			g_prefix_error (error, "802-1x-setting: ");
 			g_clear_object (&config);
 		}

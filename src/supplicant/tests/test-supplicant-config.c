@@ -276,6 +276,7 @@ test_wifi_wep_key (const char *detail,
 	g_assert (nm_supplicant_config_add_setting_wireless_security (config,
 	                                                              s_wsec,
 	                                                              NULL,
+	                                                              s_con,
 	                                                              "376aced7-b28c-46be-9a62-fcdf072571da",
 	                                                              1500,
 	                                                              &error));
@@ -423,6 +424,7 @@ test_wifi_wpa_psk (const char *detail,
 	g_assert (nm_supplicant_config_add_setting_wireless_security (config,
 	                                                              s_wsec,
 	                                                              NULL,
+	                                                              s_con,
 	                                                              "376aced7-b28c-46be-9a62-fcdf072571da",
 	                                                              1500,
 	                                                              &error));
@@ -578,6 +580,7 @@ test_wifi_eap (void)
 	g_assert (nm_supplicant_config_add_setting_wireless_security (config,
 	                                                              s_wsec,
 	                                                              s_8021x,
+	                                                              s_con,
 	                                                              "d5b488af-9cab-41ed-bad4-97709c58430f",
 	                                                              mtu,
 	                                                              &error));

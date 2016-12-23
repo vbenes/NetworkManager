@@ -574,6 +574,7 @@ build_supplicant_config (NMDeviceEthernet *self,
 	const char *con_uuid;
 	NMSupplicantConfig *config = NULL;
 	NMSetting8021x *security;
+	NMSettingConnection *s_con;
 	NMConnection *connection;
 	guint32 mtu;
 
@@ -586,7 +587,8 @@ build_supplicant_config (NMDeviceEthernet *self,
 	config = nm_supplicant_config_new ();
 
 	security = nm_connection_get_setting_802_1x (connection);
-	if (!nm_supplicant_config_add_setting_8021x (config, security, con_uuid, mtu, TRUE, error)) {
+	s_con = nm_connection_get_setting_connection (connection);
+	if (!nm_supplicant_config_add_setting_8021x (config, security, s_con, con_uuid, mtu, TRUE, error)) {
 		g_prefix_error (error, "802-1x-setting: ");
 		g_clear_object (&config);
 	}
@@ -607,6 +609,7 @@ supplicant_iface_state_cb (NMSupplicantInterface *iface,
 	NMSupplicantConfig *config;
 	gboolean success = FALSE;
 	NMDeviceState devstate;
+	NMActRequest *req;
 	GError *error = NULL;
 
 	if (new_state == old_state)
@@ -617,6 +620,9 @@ supplicant_iface_state_cb (NMSupplicantInterface *iface,
 	       nm_supplicant_interface_state_to_string (new_state));
 
 	devstate = nm_device_get_state (device);
+
+	req = nm_device_get_act_request (device);
+	nm_assert (req);
 
 	switch (new_state) {
 	case NM_SUPPLICANT_INTERFACE_STATE_READY:
