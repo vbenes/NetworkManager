@@ -2765,9 +2765,13 @@ need_secrets_tls (NMSetting8021x *self,
 		scheme = nm_setting_802_1x_get_phase2_private_key_scheme (self);
 		if (scheme == NM_SETTING_802_1X_CK_SCHEME_PATH)
 			path = nm_setting_802_1x_get_phase2_private_key_path (self);
-		else if (scheme == NM_SETTING_802_1X_CK_SCHEME_PKCS11)
+		else if (scheme == NM_SETTING_802_1X_CK_SCHEME_PKCS11) {
+			if (   !priv->phase2_private_key_password
+			    && !(priv->phase2_private_key_password_flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED)) {
+				g_ptr_array_add (secrets, NM_SETTING_802_1X_PHASE2_PRIVATE_KEY_PASSWORD);
+			}
 			return;
-		else if (scheme == NM_SETTING_802_1X_CK_SCHEME_BLOB)
+		} else if (scheme == NM_SETTING_802_1X_CK_SCHEME_BLOB)
 			blob = nm_setting_802_1x_get_phase2_private_key_blob (self);
 		else {
 			g_warning ("%s: unknown phase2 private key scheme %d", __func__, scheme);
@@ -2781,9 +2785,13 @@ need_secrets_tls (NMSetting8021x *self,
 		scheme = nm_setting_802_1x_get_private_key_scheme (self);
 		if (scheme == NM_SETTING_802_1X_CK_SCHEME_PATH)
 			path = nm_setting_802_1x_get_private_key_path (self);
-		else if (scheme == NM_SETTING_802_1X_CK_SCHEME_PKCS11)
+		else if (scheme == NM_SETTING_802_1X_CK_SCHEME_PKCS11) {
+			if (   !priv->private_key_password
+			    && !(priv->private_key_password_flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED)) {
+				g_ptr_array_add (secrets, NM_SETTING_802_1X_PRIVATE_KEY_PASSWORD);
+			}
 			return;
-		else if (scheme == NM_SETTING_802_1X_CK_SCHEME_BLOB)
+		} else if (scheme == NM_SETTING_802_1X_CK_SCHEME_BLOB)
 			blob = nm_setting_802_1x_get_private_key_blob (self);
 		else {
 			g_warning ("%s: unknown private key scheme %d", __func__, scheme);

@@ -858,11 +858,6 @@ add_pkcs11_uri_with_pin (NMSupplicantConfig *self,
 		escaped = g_uri_escape_string (pin, NULL, TRUE);
 		pin_qattr = g_strdup_printf ("pin-value=%s", escaped);
 		g_free (escaped);
-	} else if (!(pin_flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED)) {
-		/* Include an empty PIN to indicate the login is still needed.
-		 * Probably a token that has a PIN path and the actual PIN will
-		 * be entered using a protected path. */
-		pin_qattr = g_strdup ("pin-value=");
 	}
 
 	tmp = g_strdup_printf ("%s%s%s", split[0],
@@ -1085,7 +1080,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 			                              nm_setting_802_1x_get_ca_cert_uri (setting),
 			                              nm_setting_802_1x_get_private_key_password (setting),
 			                              nm_setting_802_1x_get_private_key_password_flags (setting),
-						      error)) {
+			                              error)) {
 				return FALSE;
 			}
 			break;
@@ -1115,7 +1110,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 			                              nm_setting_802_1x_get_phase2_ca_cert_uri (setting),
 			                              nm_setting_802_1x_get_phase2_private_key_password (setting),
 			                              nm_setting_802_1x_get_phase2_private_key_password_flags (setting),
-						      error)) {
+			                              error)) {
 				return FALSE;
 			}
 			break;
@@ -1166,7 +1161,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 		                              nm_setting_802_1x_get_private_key_uri (setting),
 		                              nm_setting_802_1x_get_phase2_private_key_password (setting),
 		                              nm_setting_802_1x_get_phase2_private_key_password_flags (setting),
-					      error)) {
+		                              error)) {
 			return FALSE;
 		}
 		added = TRUE;
@@ -1213,7 +1208,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 				                              nm_setting_802_1x_get_client_cert_uri (setting),
 				                              nm_setting_802_1x_get_private_key_password (setting),
 				                              nm_setting_802_1x_get_private_key_password_flags (setting),
-							      error)) {
+				                              error)) {
 					return FALSE;
 				}
 				break;
@@ -1243,7 +1238,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 		                              nm_setting_802_1x_get_phase2_private_key_uri (setting),
 		                              nm_setting_802_1x_get_phase2_private_key_password (setting),
 		                              nm_setting_802_1x_get_phase2_private_key_password_flags (setting),
-					      error)) {
+		                              error)) {
 			return FALSE;
 		}
 		added = TRUE;
@@ -1290,7 +1285,7 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 				                              nm_setting_802_1x_get_phase2_client_cert_uri (setting),
 				                              nm_setting_802_1x_get_phase2_private_key_password (setting),
 				                              nm_setting_802_1x_get_phase2_private_key_password_flags (setting),
-							      error)) {
+				                              error)) {
 					return FALSE;
 				}
 				break;
