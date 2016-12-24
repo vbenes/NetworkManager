@@ -310,6 +310,18 @@ get_secrets_cb (NMSecretAgentOld *self,
 	get_secrets_info_finalize (self, info);
 }
 
+static char *
+p11_kit_remote (void)
+{
+	const char *xdg_runtime_dir;
+
+	xdg_runtime_dir = g_getenv ("XDG_RUNTIME_DIR");
+	if (xdg_runtime_dir == NULL)
+		return NULL;
+
+	return g_strdup_printf ("unix:path=%s/p11-kit-remote", xdg_runtime_dir);
+}
+
 static void
 impl_secret_agent_old_get_secrets (NMSecretAgentOld *self,
                                    GDBusMethodInvocation *context,
@@ -329,6 +341,20 @@ impl_secret_agent_old_get_secrets (NMSecretAgentOld *self,
 	if (!verify_request (self, context, connection_dict, connection_path, &connection, &error)) {
 		g_dbus_method_invocation_take_error (context, error);
 		return;
+	}
+
+	/* Deal with p11-kit remoting. Not really a secret, but needs assistance from a desktop agent. */
+	if (strcmp (setting_name, NM_SETTING_CONNECTION_SETTING_NAME) == 0) {
+		char *remote = p11_kit_remote ();
+
+		if (remote) {
+			g_dbus_method_invocation_return_value (context,
+				g_variant_new_parsed ("([{%s, [{%s, %v}]}],)",
+				                      NM_SETTING_CONNECTION_SETTING_NAME,
+				                      NM_SETTING_CONNECTION_P11_KIT_REMOTE,
+				                      g_variant_new_string (remote)));
+			return;
+		}
 	}
 
 	info = g_malloc0 (sizeof (GetSecretsInfo));
