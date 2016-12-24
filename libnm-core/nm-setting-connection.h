@@ -44,25 +44,28 @@ G_BEGIN_DECLS
 #define NM_SETTING_CONNECTION_AUTOCONNECT_PRIORITY_MAX 999
 #define NM_SETTING_CONNECTION_AUTOCONNECT_PRIORITY_DEFAULT 0
 
-#define NM_SETTING_CONNECTION_ID             "id"
-#define NM_SETTING_CONNECTION_UUID           "uuid"
-#define NM_SETTING_CONNECTION_STABLE_ID      "stable-id"
-#define NM_SETTING_CONNECTION_INTERFACE_NAME "interface-name"
-#define NM_SETTING_CONNECTION_TYPE           "type"
-#define NM_SETTING_CONNECTION_AUTOCONNECT    "autoconnect"
-#define NM_SETTING_CONNECTION_AUTOCONNECT_PRIORITY "autoconnect-priority"
-#define NM_SETTING_CONNECTION_AUTOCONNECT_RETRIES "autoconnect-retries"
-#define NM_SETTING_CONNECTION_TIMESTAMP      "timestamp"
-#define NM_SETTING_CONNECTION_READ_ONLY      "read-only"
-#define NM_SETTING_CONNECTION_PERMISSIONS    "permissions"
-#define NM_SETTING_CONNECTION_ZONE           "zone"
-#define NM_SETTING_CONNECTION_MASTER         "master"
-#define NM_SETTING_CONNECTION_SLAVE_TYPE     "slave-type"
-#define NM_SETTING_CONNECTION_AUTOCONNECT_SLAVES "autoconnect-slaves"
-#define NM_SETTING_CONNECTION_SECONDARIES    "secondaries"
-#define NM_SETTING_CONNECTION_GATEWAY_PING_TIMEOUT "gateway-ping-timeout"
-#define NM_SETTING_CONNECTION_METERED        "metered"
-#define NM_SETTING_CONNECTION_LLDP           "lldp"
+#define NM_SETTING_CONNECTION_ID                    "id"
+#define NM_SETTING_CONNECTION_UUID                  "uuid"
+#define NM_SETTING_CONNECTION_STABLE_ID             "stable-id"
+#define NM_SETTING_CONNECTION_INTERFACE_NAME        "interface-name"
+#define NM_SETTING_CONNECTION_TYPE                  "type"
+#define NM_SETTING_CONNECTION_AUTOCONNECT           "autoconnect"
+#define NM_SETTING_CONNECTION_AUTOCONNECT_PRIORITY  "autoconnect-priority"
+#define NM_SETTING_CONNECTION_AUTOCONNECT_RETRIES   "autoconnect-retries"
+#define NM_SETTING_CONNECTION_TIMESTAMP             "timestamp"
+#define NM_SETTING_CONNECTION_READ_ONLY             "read-only"
+#define NM_SETTING_CONNECTION_PERMISSIONS           "permissions"
+#define NM_SETTING_CONNECTION_ZONE                  "zone"
+#define NM_SETTING_CONNECTION_MASTER                "master"
+#define NM_SETTING_CONNECTION_SLAVE_TYPE            "slave-type"
+#define NM_SETTING_CONNECTION_AUTOCONNECT_SLAVES    "autoconnect-slaves"
+#define NM_SETTING_CONNECTION_SECONDARIES           "secondaries"
+#define NM_SETTING_CONNECTION_GATEWAY_PING_TIMEOUT  "gateway-ping-timeout"
+#define NM_SETTING_CONNECTION_METERED               "metered"
+#define NM_SETTING_CONNECTION_LLDP                  "lldp"
+#define NM_SETTING_CONNECTION_P11_KIT_REMOTE        "p11-kit-remote"
+#define NM_SETTING_CONNECTION_P11_KIT_REMOTE_FLAGS  "p11-kit-remote-flags"
+
 
 /* Types for property values */
 /**
@@ -166,6 +169,11 @@ NM_AVAILABLE_IN_1_2
 NMMetered   nm_setting_connection_get_metered (NMSettingConnection *setting);
 NM_AVAILABLE_IN_1_2
 NMSettingConnectionLldp nm_setting_connection_get_lldp (NMSettingConnection *setting);
+
+NM_AVAILABLE_IN_1_6
+const char *nm_setting_connection_get_p11_kit_remote   (NMSettingConnection *setting);
+NM_AVAILABLE_IN_1_6
+NMSettingSecretFlags nm_setting_connection_get_p11_kit_remote_flags (NMSettingConnection *setting);
 
 G_END_DECLS
 

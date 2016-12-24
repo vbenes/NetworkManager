@@ -80,6 +80,8 @@ typedef struct {
 	guint gateway_ping_timeout;
 	NMMetered metered;
 	NMSettingConnectionLldp lldp;
+	char *p11_kit_remote;
+	NMSettingSecretFlags p11_kit_remote_flags;
 } NMSettingConnectionPrivate;
 
 enum {
@@ -103,6 +105,8 @@ enum {
 	PROP_METERED,
 	PROP_LLDP,
 	PROP_STABLE_ID,
+	PROP_P11_KIT_REMOTE,
+	PROP_P11_KIT_REMOTE_FLAGS,
 
 	LAST_PROP
 };
@@ -841,6 +845,40 @@ nm_setting_connection_get_lldp (NMSettingConnection *setting)
 	return NM_SETTING_CONNECTION_GET_PRIVATE (setting)->lldp;
 }
 
+/**
+ * nm_setting_connection_get_p11_kit_remote:
+ * @setting: the #NMSettingConnection
+ *
+ * Returns the #NMSettingConnection:p11_kit_remote property of the connection.
+ *
+ * Returns: the p11-kit-remote for the connection
+ *
+ * Since: 1.6
+ **/
+const char *
+nm_setting_connection_get_p11_kit_remote (NMSettingConnection *setting)
+{
+	g_return_val_if_fail (NM_IS_SETTING_CONNECTION (setting), NULL);
+
+	return NM_SETTING_CONNECTION_GET_PRIVATE (setting)->p11_kit_remote;
+}
+
+/**
+ * nm_setting_connection_get_p11_kit_remote_flags:
+ * @setting: the #NMSettingConnection
+ *
+ * Returns: the #NMSettingSecretFlags pertaining to the #NMSettingConnection:p11-kit-remote
+ *
+ * Since: 1.6
+ **/
+NMSettingSecretFlags
+nm_setting_connection_get_p11_kit_remote_flags (NMSettingConnection *setting)
+{
+	g_return_val_if_fail (NM_IS_SETTING_CONNECTION (setting), NM_SETTING_SECRET_FLAG_NONE);
+
+	return NM_SETTING_CONNECTION_GET_PRIVATE (setting)->p11_kit_remote_flags;
+}
+
 static void
 _set_error_missing_base_setting (GError **error, const char *type)
 {
@@ -1155,6 +1193,9 @@ compare_property (NMSetting *setting,
 static void
 nm_setting_connection_init (NMSettingConnection *setting)
 {
+	NMSettingConnectionPrivate *priv = NM_SETTING_CONNECTION_GET_PRIVATE (setting);
+
+	priv->p11_kit_remote_flags = NM_SETTING_SECRET_FLAG_AGENT_OWNED;
 }
 
 static void
@@ -1270,6 +1311,13 @@ set_property (GObject *object, guint prop_id,
 	case PROP_LLDP:
 		priv->lldp = g_value_get_int (value);
 		break;
+	case PROP_P11_KIT_REMOTE:
+		g_free (priv->p11_kit_remote);
+		priv->p11_kit_remote = g_value_dup_string (value);
+		break;
+	case PROP_P11_KIT_REMOTE_FLAGS:
+		priv->p11_kit_remote_flags = g_value_get_flags (value);
+		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 		break;
@@ -1354,6 +1402,12 @@ get_property (GObject *object, guint prop_id,
 		break;
 	case PROP_LLDP:
 		g_value_set_int (value, priv->lldp);
+		break;
+        case PROP_P11_KIT_REMOTE:
+		g_value_set_string (value, priv->p11_kit_remote);
+		break;
+	case PROP_P11_KIT_REMOTE_FLAGS:
+		g_value_set_flags (value, priv->p11_kit_remote_flags);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1886,4 +1940,28 @@ nm_setting_connection_class_init (NMSettingConnectionClass *setting_class)
 		                   G_PARAM_READWRITE |
 		                   G_PARAM_CONSTRUCT |
 		                   G_PARAM_STATIC_STRINGS));
+
+	/**
+	 * NMSettingConnection:p11-kit-remote:
+	 *
+	 **/
+	g_object_class_install_property
+		(object_class, PROP_P11_KIT_REMOTE,
+		 g_param_spec_string (NM_SETTING_CONNECTION_P11_KIT_REMOTE, "", "",
+		                      NULL,
+		                      G_PARAM_READWRITE |
+		                      NM_SETTING_PARAM_SECRET |
+		                      G_PARAM_STATIC_STRINGS));
+
+	/**
+	 * NMSettingConnection:p11-kit-remote-flags:
+	 *
+	 **/
+	g_object_class_install_property
+		(object_class, PROP_P11_KIT_REMOTE_FLAGS,
+		 g_param_spec_flags (NM_SETTING_CONNECTION_P11_KIT_REMOTE_FLAGS, "", "",
+		                     NM_TYPE_SETTING_SECRET_FLAGS,
+		                     NM_SETTING_SECRET_FLAG_AGENT_OWNED,
+		                     G_PARAM_READWRITE |
+		                     G_PARAM_STATIC_STRINGS));
 }
