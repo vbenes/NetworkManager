@@ -2236,6 +2236,34 @@ supplicant_iface_notify_current_bss (NMSupplicantInterface *iface,
 	}
 }
 
+static gboolean
+wifi_needs_p11_remote (NMConnection *connection)
+{
+	NMSettingConnection *s_con;
+	NMSetting8021x *s_8021x;
+	const char *remote;
+	NMSettingSecretFlags remote_flags;
+
+	s_8021x = nm_connection_get_setting_802_1x (connection);
+
+	if (!s_8021x)
+		return FALSE;
+	if (!nm_setting_802_1x_uses_pkcs11 (s_8021x))
+		return FALSE;
+
+	s_con = nm_connection_get_setting_connection (connection);
+
+	remote_flags = nm_setting_connection_get_p11_kit_remote_flags (s_con);
+	if (remote_flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED)
+		return FALSE;
+
+	remote = nm_setting_connection_get_p11_kit_remote (s_con);
+	if (remote && *remote)
+		return FALSE;
+
+	return TRUE;
+}
+
 static NMActStageReturn
 handle_auth_or_fail (NMDeviceWifi *self,
                      NMActRequest *req,
@@ -2261,8 +2289,13 @@ handle_auth_or_fail (NMDeviceWifi *self,
 
 	nm_device_state_changed (NM_DEVICE (self), NM_DEVICE_STATE_NEED_AUTH, NM_DEVICE_STATE_REASON_NONE);
 
-	nm_act_request_clear_secrets (req);
 	setting_name = nm_connection_need_secrets (applied_connection, NULL);
+	if (setting_name) {
+		nm_act_request_clear_secrets (req);
+	} else {
+		if (wifi_needs_p11_remote (applied_connection))
+			setting_name = NM_SETTING_CONNECTION_SETTING_NAME;
+	}
 	if (setting_name) {
 		wifi_secrets_get_secrets (self, setting_name,
 		                          NM_SECRET_AGENT_GET_SECRETS_FLAG_ALLOW_INTERACTION
@@ -2591,6 +2624,7 @@ act_stage2_config (NMDevice *device, NMDeviceStateReason *reason)
 	NMConnection *connection;
 	const char *setting_name;
 	NMSettingWireless *s_wireless;
+	gboolean need_p11_remote;
 	GError *error = NULL;
 
 	g_return_val_if_fail (reason != NULL, NM_ACT_STAGE_RETURN_FAILURE);
@@ -2612,9 +2646,11 @@ act_stage2_config (NMDevice *device, NMDeviceStateReason *reason)
 	s_wireless = nm_connection_get_setting_wireless (connection);
 	g_assert (s_wireless);
 
+	need_p11_remote = wifi_needs_p11_remote (connection);
+
 	/* If we need secrets, get them */
 	setting_name = nm_connection_need_secrets (connection, NULL);
-	if (setting_name) {
+	if (need_p11_remote || setting_name) {
 		_LOGI (LOGD_DEVICE | LOGD_WIFI,
 		       "Activation: (wifi) access point '%s' has security, but secrets are required.",
 		       nm_connection_get_id (connection));

@@ -2704,6 +2704,20 @@ nm_setting_802_1x_get_phase2_private_key_format (NMSetting8021x *setting)
 	return NM_SETTING_802_1X_CK_FORMAT_UNKNOWN;
 }
 
+gboolean
+nm_setting_802_1x_uses_pkcs11 (NMSetting8021x *setting)
+{
+	if (  nm_setting_802_1x_get_ca_cert_scheme (setting) == NM_SETTING_802_1X_CK_SCHEME_PKCS11
+	    || nm_setting_802_1x_get_client_cert_scheme (setting) == NM_SETTING_802_1X_CK_SCHEME_PKCS11
+	    || nm_setting_802_1x_get_phase2_ca_cert_scheme (setting) == NM_SETTING_802_1X_CK_SCHEME_PKCS11
+	    || nm_setting_802_1x_get_phase2_client_cert_scheme (setting) == NM_SETTING_802_1X_CK_SCHEME_PKCS11
+	    || nm_setting_802_1x_get_private_key_scheme (setting) == NM_SETTING_802_1X_CK_SCHEME_PKCS11
+	    || nm_setting_802_1x_get_phase2_private_key_scheme (setting) == NM_SETTING_802_1X_CK_SCHEME_PKCS11)
+		return TRUE;
+
+	return FALSE;
+}
+
 static void
 need_secrets_password (NMSetting8021x *self,
                        GPtrArray *secrets,
