@@ -720,6 +720,7 @@ _nm_setting_to_dbus (NMSetting *setting, NMConnection *connection, NMConnectionS
 	GVariant *dbus_value;
 	const NMSettingProperty *properties;
 	guint n_properties, i;
+	gboolean empty = TRUE;
 
 	g_return_val_if_fail (NM_IS_SETTING (setting), NULL);
 
@@ -755,16 +756,26 @@ _nm_setting_to_dbus (NMSetting *setting, NMConnection *connection, NMConnectionS
 			dbus_value = property->synth_func (setting, connection, property->name);
 		else
 			dbus_value = get_property_for_dbus (setting, property, TRUE);
+
 		if (dbus_value) {
 			/* Allow dbus_value to be either floating or not. */
 			g_variant_take_ref (dbus_value);
 
 			g_variant_builder_add (&builder, "{sv}", property->name, dbus_value);
 			g_variant_unref (dbus_value);
+
+			empty = FALSE;
 		}
 	}
 
-	return g_variant_builder_end (&builder);
+	dbus_value = g_variant_builder_end (&builder);
+
+	if (empty && (flags & NM_CONNECTION_SERIALIZE_ONLY_SECRETS)) {
+		g_variant_unref (dbus_value);
+		dbus_value = NULL; 
+	}
+
+	return dbus_value;
 }
 
 /**
