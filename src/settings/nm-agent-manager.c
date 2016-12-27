@@ -36,6 +36,7 @@
 #include "nm-simple-connection.h"
 #include "NetworkManagerUtils.h"
 #include "nm-core-internal.h"
+#include "nm-setting-private.h"
 
 #include "introspection/org.freedesktop.NetworkManager.AgentManager.h"
 
@@ -1130,6 +1131,8 @@ _con_get_try_complete_early (Request *req)
 	NMAgentManager *self;
 	gs_unref_variant GVariant *setting_secrets = NULL;
 	gs_unref_object NMConnection *tmp = NULL;
+	NMSetting *setting;
+	GPtrArray *needed_secrets;
 	GError *error = NULL;
 
 	self = req->self;
@@ -1154,17 +1157,29 @@ _con_get_try_complete_early (Request *req)
 		g_clear_error (&error);
 		return TRUE;
 	}
+
+	setting = nm_connection_get_setting_by_name (tmp, req->con.get.setting_name);
+	if (!setting)
+		return FALSE;
+
+	needed_secrets = _nm_setting_need_secrets (setting);
+
 	/* Do we have everything we need? */
 	if (   NM_FLAGS_HAS (req->con.get.flags, NM_SECRET_AGENT_GET_SECRETS_FLAG_ONLY_SYSTEM)
-	    || (   (nm_connection_need_secrets (tmp, NULL) == NULL)
+	    || (   needed_secrets == NULL
 	        && !NM_FLAGS_HAS(req->con.get.flags, NM_SECRET_AGENT_GET_SECRETS_FLAG_REQUEST_NEW))) {
 		_LOGD (NULL, "("LOG_REQ_FMT") system settings secrets sufficient",
 		       LOG_REQ_ARG (req));
 
 		/* Got everything, we're done */
 		req_complete (req, req->con.get.existing_secrets, NULL, NULL, NULL);
+		if (needed_secrets)
+			g_ptr_array_free (needed_secrets, FALSE);
 		return TRUE;
 	}
+
+	if (needed_secrets)
+		g_ptr_array_free (needed_secrets, FALSE);
 
 	_LOGD (NULL, "("LOG_REQ_FMT") system settings secrets insufficient, asking agents",
 	       LOG_REQ_ARG (req));
