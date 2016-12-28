@@ -1333,8 +1333,6 @@ nm_connection_update_secrets (NMConnection *connection,
 		}
 
 		g_signal_handlers_block_by_func (setting, (GCallback) setting_changed_cb, connection);
-		if (_nm_setting_clear_secrets (setting))
-			updated = TRUE;
 		success_detail = _nm_setting_update_secrets (setting,
 		                                             setting_dict ? setting_dict : secrets,
 		                                             error);
@@ -1367,8 +1365,6 @@ nm_connection_update_secrets (NMConnection *connection,
 			setting = nm_connection_get_setting_by_name (connection, key);
 
 			g_signal_handlers_block_by_func (setting, (GCallback) setting_changed_cb, connection);
-			if (_nm_setting_clear_secrets (setting))
-				updated = TRUE;
 			success_detail = _nm_setting_update_secrets (setting, setting_dict, error);
 			g_signal_handlers_unblock_by_func (setting, (GCallback) setting_changed_cb, connection);
 

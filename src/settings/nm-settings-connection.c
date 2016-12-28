@@ -1053,6 +1053,7 @@ get_secrets_done_cb (NMAgentManager *manager,
 	dict = nm_connection_to_dbus (priv->system_secrets, NM_CONNECTION_SERIALIZE_ONLY_SECRETS);
 
 	/* Update the connection with our existing secrets from backing storage */
+	nm_connection_clear_secrets (NM_CONNECTION (self));
 	if (!dict || nm_connection_update_secrets (NM_CONNECTION (self), setting_name, dict, &local)) {
 		GVariant *filtered_secrets;
 
@@ -1112,6 +1113,8 @@ get_secrets_done_cb (NMAgentManager *manager,
 		               secrets,
 		               &agent_had_system,
 		               &cmp_flags);
+
+		nm_connection_clear_secrets (applied_connection);
 
 		if (!dict || nm_connection_update_secrets (applied_connection, setting_name, dict, NULL)) {
 			GVariant *filtered_secrets;
