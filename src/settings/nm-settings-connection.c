@@ -36,6 +36,7 @@
 #include "NetworkManagerUtils.h"
 #include "nm-core-internal.h"
 #include "nm-audit-manager.h"
+#include "nm-setting-private.h"
 
 #include "introspection/org.freedesktop.NetworkManager.Settings.Connection.h"
 
@@ -971,6 +972,15 @@ get_cmp_flags (NMSettingsConnection *self, /* only needed for logging */
 }
 
 static void
+clear_secrets_for_setting (NMSettingsConnection *self, const char *setting_name)
+{
+	NMSetting *setting;
+
+	setting = nm_connection_get_setting_by_name (NM_CONNECTION (self), setting_name);
+	_nm_setting_clear_secrets (setting);
+}
+
+static void
 get_secrets_done_cb (NMAgentManager *manager,
                      NMAgentManagerCallId call_id_a,
                      const char *agent_dbus_owner,
@@ -1053,7 +1063,7 @@ get_secrets_done_cb (NMAgentManager *manager,
 	dict = nm_connection_to_dbus (priv->system_secrets, NM_CONNECTION_SERIALIZE_ONLY_SECRETS);
 
 	/* Update the connection with our existing secrets from backing storage */
-	nm_connection_clear_secrets (NM_CONNECTION (self));
+	clear_secrets_for_setting (self, setting_name);
 	if (!dict || nm_connection_update_secrets (NM_CONNECTION (self), setting_name, dict, &local)) {
 		GVariant *filtered_secrets;
 
@@ -1114,8 +1124,7 @@ get_secrets_done_cb (NMAgentManager *manager,
 		               &agent_had_system,
 		               &cmp_flags);
 
-		nm_connection_clear_secrets (applied_connection);
-
+		clear_secrets_for_setting (self, setting_name);
 		if (!dict || nm_connection_update_secrets (applied_connection, setting_name, dict, NULL)) {
 			GVariant *filtered_secrets;
 
