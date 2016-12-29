@@ -1176,8 +1176,8 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 	case NM_SETTING_802_1X_CK_SCHEME_PKCS11:
 		if (!add_pkcs11_uri_with_pin (self, "private_key",
 		                              nm_setting_802_1x_get_private_key_uri (setting),
-		                              nm_setting_802_1x_get_phase2_private_key_password (setting),
-		                              nm_setting_802_1x_get_phase2_private_key_password_flags (setting),
+		                              nm_setting_802_1x_get_private_key_password (setting),
+		                              nm_setting_802_1x_get_private_key_password_flags (setting),
 		                              nm_setting_connection_get_p11_kit_remote (setting_con),
 		                              error)) {
 			return FALSE;
