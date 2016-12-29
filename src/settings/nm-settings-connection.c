@@ -1064,7 +1064,7 @@ get_secrets_done_cb (NMAgentManager *manager,
 
 	/* Update the connection with our existing secrets from backing storage */
 	clear_secrets_for_setting (self, setting_name);
-	if (!dict || nm_connection_update_secrets (NM_CONNECTION (self), setting_name, dict, &local)) {
+	if (!dict || nm_connection_update_secrets (NM_CONNECTION (self), NULL, dict, &local)) {
 		GVariant *filtered_secrets;
 
 		/* Update the connection with the agent's secrets; by this point if any
@@ -1125,7 +1125,7 @@ get_secrets_done_cb (NMAgentManager *manager,
 		               &cmp_flags);
 
 		clear_secrets_for_setting (self, setting_name);
-		if (!dict || nm_connection_update_secrets (applied_connection, setting_name, dict, NULL)) {
+		if (!dict || nm_connection_update_secrets (applied_connection, NULL, dict, NULL)) {
 			GVariant *filtered_secrets;
 
 			filtered_secrets = for_each_secret (applied_connection, secrets, TRUE, validate_secret_flags, &cmp_flags);
