@@ -331,9 +331,6 @@ NMSettingSecretFlags   nm_setting_802_1x_get_phase2_private_key_password_flags (
 
 NMSetting8021xCKFormat nm_setting_802_1x_get_phase2_private_key_format   (NMSetting8021x *setting);
 
-NM_AVAILABLE_IN_1_6
-gboolean               nm_setting_802_1x_uses_pkcs11                     (NMSetting8021x *setting);
-
 
 G_END_DECLS
 
