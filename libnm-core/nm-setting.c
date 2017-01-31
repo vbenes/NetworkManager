@@ -1667,6 +1667,17 @@ _nm_setting_need_secrets (NMSetting *setting)
 	return secrets;
 }
 
+gboolean
+_nm_setting_uses_pkcs11 (NMSetting *setting)
+{
+	g_return_val_if_fail (NM_IS_SETTING (setting), FALSE);
+
+	if (NM_SETTING_GET_CLASS (setting)->uses_pkcs11)
+		return NM_SETTING_GET_CLASS (setting)->uses_pkcs11 (setting);
+
+	return FALSE;
+}
+
 static int
 update_one_secret (NMSetting *setting, const char *key, GVariant *value, GError **error)
 {

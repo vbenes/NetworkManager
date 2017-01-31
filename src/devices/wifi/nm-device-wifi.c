@@ -37,6 +37,7 @@
 #include "supplicant/nm-supplicant-manager.h"
 #include "supplicant/nm-supplicant-interface.h"
 #include "supplicant/nm-supplicant-config.h"
+#include "nm-setting-private.h"
 #include "nm-setting-connection.h"
 #include "nm-setting-wireless.h"
 #include "nm-setting-wireless-security.h"
@@ -1861,17 +1862,14 @@ link_timeout_cb (gpointer user_data)
 	return FALSE;
 }
 
-static gboolean
+static const char *
 need_new_8021x_secrets (NMDeviceWifi *self,
-                        guint32 old_state,
-                        const char **setting_name)
+                        guint32 old_state)
 {
 	NMSetting8021x *s_8021x;
 	NMSettingWirelessSecurity *s_wsec;
 	NMSettingSecretFlags secret_flags = NM_SETTING_SECRET_FLAG_NONE;
 	NMConnection *connection;
-
-	g_assert (setting_name != NULL);
 
 	connection = nm_device_get_applied_connection (NM_DEVICE (self));
 	g_return_val_if_fail (connection != NULL, FALSE);
@@ -1880,7 +1878,7 @@ need_new_8021x_secrets (NMDeviceWifi *self,
 	 * attempting to authenticate with the AP.
 	 */
 	if (old_state != NM_SUPPLICANT_INTERFACE_STATE_ASSOCIATED)
-		return FALSE;
+		return NULL;
 
 	/* If it's an 802.1x or LEAP connection with "always ask"/unsaved secrets
 	 * then we need to ask again because it might be an OTP token and the PIN
@@ -1895,8 +1893,7 @@ need_new_8021x_secrets (NMDeviceWifi *self,
 		                                  NULL))
 			g_assert_not_reached ();
 		if (secret_flags & NM_SETTING_SECRET_FLAG_NOT_SAVED)
-			*setting_name = NM_SETTING_802_1X_SETTING_NAME;
-		return *setting_name ? TRUE : FALSE;
+			return NM_SETTING_802_1X_SETTING_NAME;
 	}
 
 	s_wsec = nm_connection_get_setting_wireless_security (connection);
@@ -1907,32 +1904,28 @@ need_new_8021x_secrets (NMDeviceWifi *self,
 		                                  NULL))
 			g_assert_not_reached ();
 		if (secret_flags & NM_SETTING_SECRET_FLAG_NOT_SAVED)
-			*setting_name = NM_SETTING_WIRELESS_SECURITY_SETTING_NAME;
-		return *setting_name ? TRUE : FALSE;
+			return NM_SETTING_WIRELESS_SECURITY_SETTING_NAME;
 	}
 
 	/* Not a LEAP or 802.1x connection */
-	return FALSE;
+	return NULL;
 }
 
-static gboolean
+static const char *
 need_new_wpa_psk (NMDeviceWifi *self,
                   guint32 old_state,
-                  gint disconnect_reason,
-                  const char **setting_name)
+                  gint disconnect_reason)
 {
 	NMSettingWirelessSecurity *s_wsec;
 	NMConnection *connection;
 	const char *key_mgmt = NULL;
 
-	g_assert (setting_name != NULL);
-
 	connection = nm_device_get_applied_connection (NM_DEVICE (self));
-	g_return_val_if_fail (connection != NULL, FALSE);
+	g_return_val_if_fail (connection != NULL, NULL);
 
 	/* A bad PSK will cause the supplicant to disconnect during the 4-way handshake */
 	if (old_state != NM_SUPPLICANT_INTERFACE_STATE_4WAY_HANDSHAKE)
-		return FALSE;
+		return NULL;
 
 	s_wsec = nm_connection_get_setting_wireless_security (connection);
 	if (s_wsec)
@@ -1946,14 +1939,13 @@ need_new_wpa_psk (NMDeviceWifi *self,
 		 */
 		#define LOCAL_WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY -4
 		if (disconnect_reason == LOCAL_WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY)
-			return FALSE;
+			return NULL;
 
-		*setting_name = NM_SETTING_WIRELESS_SECURITY_SETTING_NAME;
-		return TRUE;
+		return NM_SETTING_WIRELESS_SECURITY_SETTING_NAME;
 	}
 
 	/* Not a WPA-PSK connection */
-	return FALSE;
+	return NULL;
 }
 
 static gboolean
@@ -1964,17 +1956,32 @@ handle_8021x_or_psk_auth_fail (NMDeviceWifi *self,
 {
 	NMDevice *device = NM_DEVICE (self);
 	NMActRequest *req;
+	NMConnection *connection;
+	NMSetting8021x *s_8021x;
 	const char *setting_name = NULL;
-	gboolean handled = FALSE;
+	NMSecretAgentGetSecretsFlags flags =   NM_SECRET_AGENT_GET_SECRETS_FLAG_ALLOW_INTERACTION
+	                                     | NM_SECRET_AGENT_GET_SECRETS_FLAG_REQUEST_NEW;
 
 	g_return_val_if_fail (new_state == NM_SUPPLICANT_INTERFACE_STATE_DISCONNECTED, FALSE);
 
 	req = nm_device_get_act_request (NM_DEVICE (self));
 	g_return_val_if_fail (req != NULL, FALSE);
 
-	if (   need_new_8021x_secrets (self, old_state, &setting_name)
-	    || need_new_wpa_psk (self, old_state, disconnect_reason, &setting_name)) {
+	connection = nm_device_get_applied_connection (NM_DEVICE (self));
+	g_return_val_if_fail (connection != NULL, FALSE);
 
+	setting_name = need_new_8021x_secrets (self, old_state);
+	if (!setting_name)
+		setting_name = need_new_wpa_psk (self, old_state, disconnect_reason);
+	s_8021x = nm_connection_get_setting_802_1x (connection);
+	if (_nm_setting_uses_pkcs11 (NM_SETTING (s_8021x))) {
+		if (setting_name)
+			flags |= NM_SECRET_AGENT_GET_SECRETS_FLAG_GET_P11_SOCKET;
+		else
+			setting_name = NM_SETTING_CONNECTION_SETTING_NAME;
+	}
+
+	if (setting_name) {
 		nm_act_request_clear_secrets (req);
 
 		_LOGI (LOGD_DEVICE | LOGD_WIFI,
@@ -1982,14 +1989,10 @@ handle_8021x_or_psk_auth_fail (NMDeviceWifi *self,
 
 		cleanup_association_attempt (self, TRUE);
 		nm_device_state_changed (device, NM_DEVICE_STATE_NEED_AUTH, NM_DEVICE_STATE_REASON_SUPPLICANT_DISCONNECT);
-		wifi_secrets_get_secrets (self,
-		                          setting_name,
-		                          NM_SECRET_AGENT_GET_SECRETS_FLAG_ALLOW_INTERACTION
-		                            | NM_SECRET_AGENT_GET_SECRETS_FLAG_REQUEST_NEW);
-		handled = TRUE;
-	}
-
-	return handled;
+		wifi_secrets_get_secrets (self, setting_name, flags);
+		return TRUE;
+	} else
+		return FALSE;
 }
 
 static gboolean
@@ -2245,6 +2248,8 @@ handle_auth_or_fail (NMDeviceWifi *self,
 	guint32 tries;
 	NMConnection *applied_connection;
 	NMActStageReturn ret = NM_ACT_STAGE_RETURN_FAILURE;
+	NMSecretAgentGetSecretsFlags flags = NM_SECRET_AGENT_GET_SECRETS_FLAG_ALLOW_INTERACTION;
+	NMSetting8021x *s_8021x;
 
 	g_return_val_if_fail (NM_IS_DEVICE_WIFI (self), NM_ACT_STAGE_RETURN_FAILURE);
 
@@ -2259,14 +2264,25 @@ handle_auth_or_fail (NMDeviceWifi *self,
 	if (tries > 3)
 		return NM_ACT_STAGE_RETURN_FAILURE;
 
-	nm_device_state_changed (NM_DEVICE (self), NM_DEVICE_STATE_NEED_AUTH, NM_DEVICE_STATE_REASON_NONE);
-
-	nm_act_request_clear_secrets (req);
 	setting_name = nm_connection_need_secrets (applied_connection, NULL);
+	s_8021x = nm_connection_get_setting_802_1x (applied_connection);
+	if (_nm_setting_uses_pkcs11 (NM_SETTING (s_8021x))) {
+		if (setting_name)
+			flags |= NM_SECRET_AGENT_GET_SECRETS_FLAG_GET_P11_SOCKET;
+		else
+			setting_name = NM_SETTING_CONNECTION_SETTING_NAME;
+	}
+	if (!setting_name)
+		return NM_ACT_STAGE_RETURN_SUCCESS;
+
+	nm_device_state_changed (NM_DEVICE (self), NM_DEVICE_STATE_NEED_AUTH, NM_DEVICE_STATE_REASON_NONE);
+	nm_act_request_clear_secrets (req);
+
+	if (new_secrets)
+		flags |= NM_SECRET_AGENT_GET_SECRETS_FLAG_REQUEST_NEW;
+
 	if (setting_name) {
-		wifi_secrets_get_secrets (self, setting_name,
-		                          NM_SECRET_AGENT_GET_SECRETS_FLAG_ALLOW_INTERACTION
-		                          | (new_secrets ? NM_SECRET_AGENT_GET_SECRETS_FLAG_REQUEST_NEW : 0));
+		wifi_secrets_get_secrets (self, setting_name, flags);
 		g_object_set_data (G_OBJECT (applied_connection), WIRELESS_SECRETS_TRIES, GUINT_TO_POINTER (++tries));
 		ret = NM_ACT_STAGE_RETURN_POSTPONE;
 	} else
@@ -2326,6 +2342,7 @@ supplicant_connection_timeout_cb (gpointer user_data)
 	if (priv->ssid_found && nm_connection_get_setting_wireless_security (connection)) {
 		guint64 timestamp = 0;
 		gboolean new_secrets = TRUE;
+		NMActStageReturn ret = NM_ACT_STAGE_RETURN_FAILURE;
 
 		/* Connection failed; either driver problems, the encryption key is
 		 * wrong, or the passwords or certificates were wrong.
@@ -2341,11 +2358,14 @@ supplicant_connection_timeout_cb (gpointer user_data)
 		if (nm_settings_connection_get_timestamp (nm_act_request_get_settings_connection (req), &timestamp))
 			new_secrets = !timestamp;
 
-		if (handle_auth_or_fail (self, req, new_secrets) == NM_ACT_STAGE_RETURN_POSTPONE)
-			_LOGW (LOGD_DEVICE | LOGD_WIFI, "Activation: (wifi) asking for new secrets");
-		else {
+		ret = handle_auth_or_fail (self, req, new_secrets);
+		if (ret == NM_ACT_STAGE_RETURN_FAILURE) {
 			nm_device_state_changed (device, NM_DEVICE_STATE_FAILED,
 			                         NM_DEVICE_STATE_REASON_NO_SECRETS);
+		}
+		if (ret == NM_ACT_STAGE_RETURN_POSTPONE) {
+			_LOGI (LOGD_DEVICE | LOGD_WIFI,
+			       "Activation: (wifi) asking for new secrets");
 		}
 	} else {
 		_LOGW (LOGD_DEVICE | LOGD_WIFI,
@@ -2592,7 +2612,6 @@ act_stage2_config (NMDevice *device, NMDeviceStateReason *reason)
 	NMActRequest *req;
 	NMWifiAP *ap;
 	NMConnection *connection;
-	const char *setting_name;
 	NMSettingWireless *s_wireless;
 	GError *error = NULL;
 
@@ -2616,15 +2635,14 @@ act_stage2_config (NMDevice *device, NMDeviceStateReason *reason)
 	g_assert (s_wireless);
 
 	/* If we need secrets, get them */
-	setting_name = nm_connection_need_secrets (connection, NULL);
-	if (setting_name) {
+	ret = handle_auth_or_fail (self, req, FALSE);
+	if (ret == NM_ACT_STAGE_RETURN_FAILURE) {
+		*reason = NM_DEVICE_STATE_REASON_NO_SECRETS;
+		goto out;
+	}
+	if (ret == NM_ACT_STAGE_RETURN_POSTPONE) {
 		_LOGI (LOGD_DEVICE | LOGD_WIFI,
-		       "Activation: (wifi) access point '%s' has security, but secrets are required.",
-		       nm_connection_get_id (connection));
-
-		ret = handle_auth_or_fail (self, req, FALSE);
-		if (ret == NM_ACT_STAGE_RETURN_FAILURE)
-			*reason = NM_DEVICE_STATE_REASON_NO_SECRETS;
+		       "Activation: (wifi) asking for new secrets");
 		goto out;
 	}
 
@@ -2823,12 +2841,12 @@ handle_ip_config_timeout (NMDeviceWifi *self,
 		       "Activation: (wifi) could not get IP configuration for connection '%s'.",
 		       nm_connection_get_id (connection));
 
-		ret = handle_auth_or_fail (self, NULL, TRUE);
+		ret = handle_auth_or_fail (self, NULL, FALSE);
+		if (ret == NM_ACT_STAGE_RETURN_FAILURE)
+			*reason = NM_DEVICE_STATE_REASON_NO_SECRETS;
 		if (ret == NM_ACT_STAGE_RETURN_POSTPONE) {
 			_LOGI (LOGD_DEVICE | LOGD_WIFI,
 			       "Activation: (wifi) asking for new secrets");
-		} else {
-			*reason = NM_DEVICE_STATE_REASON_NO_SECRETS;
 		}
 	} else {
 		/* Not static WEP or failure allowed; let superclass handle it */

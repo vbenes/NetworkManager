@@ -174,4 +174,6 @@ gboolean _nm_setting_use_legacy_property (NMSetting *setting,
 
 GPtrArray  *_nm_setting_need_secrets (NMSetting *setting);
 
+gboolean    _nm_setting_uses_pkcs11 (NMSetting *setting);
+
 #endif  /* NM_SETTING_PRIVATE_H */

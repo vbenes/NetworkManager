@@ -3115,6 +3115,22 @@ need_secrets (NMSetting *setting)
 }
 
 static gboolean
+uses_pkcs11 (NMSetting *setting)
+{
+	NMSetting8021x *self = NM_SETTING_802_1X (setting);
+
+	if (  nm_setting_802_1x_get_ca_cert_scheme (self) == NM_SETTING_802_1X_CK_SCHEME_PKCS11
+	    || nm_setting_802_1x_get_client_cert_scheme (self) == NM_SETTING_802_1X_CK_SCHEME_PKCS11
+	    || nm_setting_802_1x_get_phase2_ca_cert_scheme (self) == NM_SETTING_802_1X_CK_SCHEME_PKCS11
+	    || nm_setting_802_1x_get_phase2_client_cert_scheme (self) == NM_SETTING_802_1X_CK_SCHEME_PKCS11
+	    || nm_setting_802_1x_get_private_key_scheme (self) == NM_SETTING_802_1X_CK_SCHEME_PKCS11
+	    || nm_setting_802_1x_get_phase2_private_key_scheme (self) == NM_SETTING_802_1X_CK_SCHEME_PKCS11)
+		return TRUE;
+
+	return FALSE;
+}
+
+static gboolean
 verify_cert (GBytes *bytes, const char *prop_name,
              const char *password, const char *password_prop_name, GError **error)
 {
@@ -3702,6 +3718,7 @@ nm_setting_802_1x_class_init (NMSetting8021xClass *setting_class)
 
 	parent_class->verify         = verify;
 	parent_class->need_secrets   = need_secrets;
+	parent_class->uses_pkcs11    = uses_pkcs11;
 
 	/* Properties */
 

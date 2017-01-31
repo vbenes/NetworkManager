@@ -956,6 +956,7 @@ static void
 _con_get_request_start_proceed (Request *req, gboolean include_system_secrets)
 {
 	NMConnection *tmp;
+	char *settings;
 
 	g_return_if_fail (req->request_type == REQUEST_TYPE_CON_GET);
 
@@ -971,6 +972,15 @@ _con_get_request_start_proceed (Request *req, gboolean include_system_secrets)
 		 */
 		if (req->con.get.existing_secrets)
 			set_secrets_not_required (tmp, req->con.get.existing_secrets);
+	}
+
+	if (   req->con.get.flags & NM_SECRET_AGENT_GET_SECRETS_FLAG_GET_P11_SOCKET
+	    && (nm_secret_agent_get_capabilities (req->current) & NM_SECRET_AGENT_CAPABILITY_MULTIPLE_SETTINGS)) {
+		settings = g_strdup_printf ("%s,%s",
+		                            req->con.get.setting_name,
+		                            NM_SETTING_CONNECTION_SETTING_NAME);
+	} else {
+		settings = g_strdup (req->con.get.setting_name);
 	}
 
 	req->current_call_id = nm_secret_agent_get_secrets (req->current,

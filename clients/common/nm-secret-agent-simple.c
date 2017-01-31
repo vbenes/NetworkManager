@@ -859,6 +859,7 @@ nm_secret_agent_simple_new (const char *name)
 {
 	return g_initable_new (NM_TYPE_SECRET_AGENT_SIMPLE, NULL, NULL,
 	                       NM_SECRET_AGENT_OLD_IDENTIFIER, name,
-	                       NM_SECRET_AGENT_OLD_CAPABILITIES, NM_SECRET_AGENT_CAPABILITY_VPN_HINTS,
+	                       NM_SECRET_AGENT_OLD_CAPABILITIES, NM_SECRET_AGENT_CAPABILITY_VPN_HINTS |
+	                                                         NM_SECRET_AGENT_CAPABILITY_MULTIPLE_SETTINGS,
 	                       NULL);
 }

@@ -628,6 +628,8 @@ typedef enum {
  *   the D-Bus API.
  * @NM_SECRET_AGENT_GET_SECRETS_FLAG_NO_ERRORS: Internal flag, not part of
  *   the D-Bus API.
+ * @NM_SECRET_AGENT_GET_SECRETS_FLAG_GET_P11_SOCKET: Internal flag, not part of
+ *   the D-Bus API.
  *
  * #NMSecretAgentGetSecretsFlags values modify the behavior of a GetSecrets request.
  */
@@ -640,6 +642,7 @@ typedef enum { /*< flags >*/
 	/* Internal to NM; not part of the D-Bus API */
 	NM_SECRET_AGENT_GET_SECRETS_FLAG_ONLY_SYSTEM       = 0x80000000,
 	NM_SECRET_AGENT_GET_SECRETS_FLAG_NO_ERRORS         = 0x40000000,
+	NM_SECRET_AGENT_GET_SECRETS_FLAG_GET_P11_SOCKET    = 0x20000000,
 } NMSecretAgentGetSecretsFlags;
 
 /**
@@ -647,6 +650,7 @@ typedef enum { /*< flags >*/
  * @NM_SECRET_AGENT_CAPABILITY_NONE: the agent supports no special capabilities
  * @NM_SECRET_AGENT_CAPABILITY_VPN_HINTS: the agent supports passing hints to
  * VPN plugin authentication dialogs.
+ * @NM_SECRET_AGENT_CAPABILITY_MULTIPLE_SETTINGS: XXX
  * @NM_SECRET_AGENT_CAPABILITY_LAST: bounds checking value; should not be used.
  *
  * #NMSecretAgentCapabilities indicate various capabilities of the agent.
@@ -654,6 +658,7 @@ typedef enum { /*< flags >*/
 typedef enum /*< flags >*/ {
 	NM_SECRET_AGENT_CAPABILITY_NONE      = 0x0,
 	NM_SECRET_AGENT_CAPABILITY_VPN_HINTS = 0x1,
+	NM_SECRET_AGENT_CAPABILITY_MULTIPLE_SETTINGS = 0x2,
 
 	/* boundary value */
 	NM_SECRET_AGENT_CAPABILITY_LAST      = NM_SECRET_AGENT_CAPABILITY_VPN_HINTS,

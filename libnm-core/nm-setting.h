@@ -214,8 +214,10 @@ typedef struct {
 	                                  const GParamSpec *prop_spec,
 	                                  NMSettingCompareFlags flags);
 
+	gboolean    (*uses_pkcs11)       (NMSetting *setting);
+
 	/*< private >*/
-	gpointer padding[7];
+	gpointer padding[6];
 } NMSettingClass;
 
 /**
