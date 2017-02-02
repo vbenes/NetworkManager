@@ -898,6 +898,7 @@ next:
 						/* Remember that there was a failure, but for now continue trying
 						 * to sync the remaining routes. */
 						success = FALSE;
+						nm_log_err (LOGD_CORE, "failure in vx_route_sync");
 					}
 				}
 			}

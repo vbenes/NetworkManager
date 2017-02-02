@@ -617,6 +617,7 @@ struct NMIPRoute {
 	guint prefix;
 	char *next_hop;
 	gint64 metric;
+	char *source;
 
 	GHashTable *attributes;
 };
@@ -836,6 +837,9 @@ nm_ip_route_dup (NMIPRoute *route)
 	                        route->dest, route->prefix,
 	                        route->next_hop, route->metric,
 	                        NULL);
+
+	copy->source = g_strdup (route->source);
+
 	if (route->attributes) {
 		GHashTableIter iter;
 		const char *key;
@@ -944,6 +948,96 @@ nm_ip_route_set_dest_binary (NMIPRoute *route,
 
 	g_free (route->dest);
 	route->dest = g_strdup (inet_ntop (route->family, dest, string, sizeof (string)));
+}
+
+/**
+ * nm_ip_route_get_dest:
+ * @route: the #NMIPRoute
+ *
+ * Gets the IP destination address property of this route object.
+ *
+ * Returns: the IP address of the route's destination
+ *
+ * Since: 1.8
+ **/
+const char *
+nm_ip_route_get_source (NMIPRoute *route)
+{
+	g_return_val_if_fail (route != NULL, NULL);
+	g_return_val_if_fail (route->refcount > 0, NULL);
+
+	return route->source;
+}
+
+/**
+ * nm_ip_route_set_dest:
+ * @route: the #NMIPRoute
+ * @dest: the route's destination, as a string
+ *
+ * Sets the destination property of this route object.
+ *
+ * @dest must be a valid address of @route's family. If you aren't sure you
+ * have a valid address, use nm_utils_ipaddr_valid() to check it.
+ *
+ * Since: 1.8
+ **/
+void
+nm_ip_route_set_source (NMIPRoute *route,
+                        const char *source)
+{
+	g_return_if_fail (route != NULL);
+	g_return_if_fail (nm_utils_ipaddr_valid (route->family, source));
+
+	g_free (route->source);
+	route->source = canonicalize_ip (route->family, source, FALSE);
+}
+
+/**
+ * nm_ip_route_get_next_hop_binary: (skip)
+ * @route: the #NMIPRoute
+ * @next_hop: a buffer in which to store the next hop in binary format.
+ *
+ * Gets the next hop property of this route object.
+ *
+ * @next_hop must point to a buffer that is the correct size for @route's family.
+ *
+ * Returns: %TRUE if @route has a next hop, %FALSE if not (in which case
+ * @next_hop will be zeroed out)
+ **/
+gboolean
+nm_ip_route_get_source_binary (NMIPRoute *route,
+                               gpointer source)
+{
+	g_return_val_if_fail (route != NULL, FALSE);
+	g_return_val_if_fail (source != NULL, FALSE);
+
+	if (route->source) {
+		inet_pton (route->family, route->source, source);
+		return TRUE;
+	} else {
+		memset (source, 0, _addr_size (route->family));
+		return FALSE;
+	}
+}
+
+/**
+ * nm_ip_route_set_next_hop_binary: (skip)
+ * @route: the #NMIPRoute
+ * @next_hop: the route's next hop, in binary format
+ *
+ * Sets the destination property of this route object.
+ *
+ * @next_hop (if non-%NULL) must point to a buffer that is the correct size for
+ * @route's family.
+ **/
+void
+nm_ip_route_set_source_binary (NMIPRoute *route,
+                               gconstpointer source)
+{
+	g_return_if_fail (route != NULL);
+
+	g_free (route->source);
+	route->source = canonicalize_ip_binary (route->family, source, TRUE);
 }
 
 /**
@@ -1168,8 +1262,7 @@ nm_ip_route_set_attribute (NMIPRoute *route, const char *name, GVariant *value)
 {
 	g_return_if_fail (route != NULL);
 	g_return_if_fail (name != NULL && *name != '\0');
-	g_return_if_fail (   strcmp (name, "dest") != 0 && strcmp (name, "prefix") != 0
-	                  && strcmp (name, "next-hop") != 0 && strcmp (name, "metric") != 0);
+	g_return_if_fail (NM_IN_STRSET (name, "dest", "prefix", "next-hop", "metric", "source"));
 
 	if (!route->attributes) {
 		route->attributes = g_hash_table_new_full (g_str_hash, g_str_equal,

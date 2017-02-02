@@ -1998,7 +1998,7 @@ write_ip4_setting (NMConnection *connection, shvarFile *ifcfg, GError **error)
 {
 	NMSettingIPConfig *s_ip4;
 	const char *value;
-	char *addr_key, *prefix_key, *netmask_key, *gw_key, *metric_key, *tmp;
+	char *addr_key, *prefix_key, *netmask_key, *gw_key, *metric_key, *source_key, *tmp;
 	char *route_path = NULL;
 	gint32 j;
 	guint32 i, n, num;
@@ -2255,12 +2255,14 @@ write_ip4_setting (NMConnection *connection, shvarFile *ifcfg, GError **error)
 			netmask_key = g_strdup_printf ("NETMASK%d", i);
 			gw_key = g_strdup_printf ("GATEWAY%d", i);
 			metric_key = g_strdup_printf ("METRIC%d", i);
+			source_key = g_strdup_printf ("SOURCE%d", i);
 
 			if (i >= num) {
 				svUnsetValue (routefile, addr_key);
 				svUnsetValue (routefile, netmask_key);
 				svUnsetValue (routefile, gw_key);
 				svUnsetValue (routefile, metric_key);
+				svUnsetValue (routefile, source_key);
 			} else {
 				route = nm_setting_ip_config_get_route (s_ip4, i);
 
@@ -2272,6 +2274,7 @@ write_ip4_setting (NMConnection *connection, shvarFile *ifcfg, GError **error)
 				svSetValueString (routefile, netmask_key, &buf[0]);
 
 				svSetValueString (routefile, gw_key, nm_ip_route_get_next_hop (route));
+				svSetValueString (routefile, source_key, nm_ip_route_get_source (route));
 
 				memset (buf, 0, sizeof (buf));
 				metric = nm_ip_route_get_metric (route);
@@ -2288,6 +2291,7 @@ write_ip4_setting (NMConnection *connection, shvarFile *ifcfg, GError **error)
 			g_free (netmask_key);
 			g_free (gw_key);
 			g_free (metric_key);
+			g_free (source_key);
 		}
 		if (!svWriteFile (routefile, 0644, error)) {
 			svCloseFile (routefile);

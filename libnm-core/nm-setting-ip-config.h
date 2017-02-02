@@ -114,7 +114,17 @@ void         nm_ip_route_set_next_hop_binary (NMIPRoute  *route,
 gint64       nm_ip_route_get_metric          (NMIPRoute  *route);
 void         nm_ip_route_set_metric          (NMIPRoute  *route,
                                               gint64 metric);
-
+NM_AVAILABLE_IN_1_8
+const char  *nm_ip_route_get_source          (NMIPRoute *route);
+NM_AVAILABLE_IN_1_8
+void         nm_ip_route_set_source          (NMIPRoute *route,
+                                              const char *source);
+NM_AVAILABLE_IN_1_8
+gboolean     nm_ip_route_get_source_binary   (NMIPRoute  *route,
+                                              gpointer source);
+NM_AVAILABLE_IN_1_8
+void         nm_ip_route_set_source_binary   (NMIPRoute  *route,
+                                              gconstpointer source);
 char       **nm_ip_route_get_attribute_names (NMIPRoute   *route);
 GVariant    *nm_ip_route_get_attribute       (NMIPRoute   *route,
                                               const char  *name);

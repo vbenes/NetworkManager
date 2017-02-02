@@ -3147,7 +3147,7 @@ nm_platform_ip4_route_add (NMPlatform *self,
 		route.mss = mss;
 		route.pref_src = pref_src;
 
-		_LOGD ("route: adding or updating IPv4 route: %s", nm_platform_ip4_route_to_string (&route, NULL, 0));
+		_LOGE ("route: adding or updating IPv4 route: %s", nm_platform_ip4_route_to_string (&route, NULL, 0));
 	}
 	return klass->ip4_route_add (self, ifindex, source, network, plen, gateway, pref_src, metric, mss);
 }

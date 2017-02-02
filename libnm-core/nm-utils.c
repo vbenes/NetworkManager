@@ -2095,7 +2095,7 @@ nm_utils_ip_routes_from_variant (GVariant *value,
 	GPtrArray *routes;
 	GVariantIter iter, attrs_iter;
 	GVariant *route_var;
-	const char *dest, *next_hop;
+	const char *dest, *next_hop, *source;
 	guint32 prefix, metric32;
 	gint64 metric;
 	const char *attr_name;
@@ -2121,6 +2121,7 @@ nm_utils_ip_routes_from_variant (GVariant *value,
 		else
 			metric = -1;
 
+
 		route = nm_ip_route_new (family, dest, prefix, next_hop, metric, &error);
 		if (!route) {
 			g_warning ("Ignoring invalid route: %s", error->message);
@@ -2128,12 +2129,12 @@ nm_utils_ip_routes_from_variant (GVariant *value,
 			goto next;
 		}
 
+		if (g_variant_lookup (route_var, "source", "&s", &source))
+			nm_ip_route_set_source (route, source);
+
 		g_variant_iter_init (&attrs_iter, route_var);
 		while (g_variant_iter_next (&attrs_iter, "{&sv}", &attr_name, &attr_val)) {
-			if (   strcmp (attr_name, "dest") != 0
-			    && strcmp (attr_name, "prefix") != 0
-			    && strcmp (attr_name, "next-hop") != 0
-			    && strcmp (attr_name, "metric") != 0)
+			if (!NM_IN_STRSET (attr_name, "dest", "prefix", "next-hop", "metric", "source"))
 				nm_ip_route_set_attribute (route, attr_name, attr_val);
 			g_variant_unref (attr_val);
 		}

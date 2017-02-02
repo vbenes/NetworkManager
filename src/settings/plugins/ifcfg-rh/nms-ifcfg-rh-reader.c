@@ -459,7 +459,7 @@ read_one_ip4_route (shvarFile *ifcfg,
                     NMIPRoute **out_route,
                     GError **error)
 {
-	char *ip_tag, *netmask_tag, *gw_tag, *metric_tag, *value;
+	char *ip_tag, *netmask_tag, *gw_tag, *metric_tag, *source_tag, *value;
 	char *dest = NULL, *next_hop = NULL;
 	gint64 prefix, metric;
 	gboolean success = FALSE;
@@ -473,6 +473,7 @@ read_one_ip4_route (shvarFile *ifcfg,
 	netmask_tag = g_strdup_printf ("NETMASK%u", which);
 	gw_tag = g_strdup_printf ("GATEWAY%u", which);
 	metric_tag = g_strdup_printf ("METRIC%u", which);
+	source_tag = g_strdup_printf ("SOURCE%u", which);
 
 	/* Destination */
 	if (!read_ip4_address (ifcfg, ip_tag, &dest, error))
@@ -532,6 +533,14 @@ read_one_ip4_route (shvarFile *ifcfg,
 	if (*out_route)
 		success = TRUE;
 
+	if (success) {
+		/* Source */
+		value = svGetValueString (ifcfg, source_tag);
+		if (value)
+			nm_ip_route_set_source (*out_route, value);
+		nm_log_err (LOGD_CORE, " -- ifcfg-rh: source %s", value);
+	}
+
 out:
 	g_free (dest);
 	g_free (next_hop);
@@ -539,6 +548,7 @@ out:
 	g_free (netmask_tag);
 	g_free (gw_tag);
 	g_free (metric_tag);
+	g_free (source_tag);
 	return success;
 }
 
