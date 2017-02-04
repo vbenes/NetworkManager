@@ -891,6 +891,40 @@ update_resolv_conf (NMDnsManager *self,
 }
 
 static void
+update_resolv_conf_unsymlink (NMDnsManager *self)
+{
+	gs_free char *path = NULL;
+	gs_free char *contents = NULL;
+	gs_free_error GError *error = NULL;
+
+	if (nm_utils_file_is_immutable (_PATH_RESCONF) > 0) {
+		_LOGT ("unsymlink: nothing to do (\"%s\" is immutable)", _PATH_RESCONF);
+		return;
+	}
+
+	path = g_file_read_link (_PATH_RESCONF, NULL);
+	if (!nm_streq0 (path, MY_RESOLV_CONF)) {
+		_LOGT ("unsymlink: nothing to do (\"%s\" does not point to \"%s\")", _PATH_RESCONF, MY_RESOLV_CONF);
+		return;
+	}
+
+	if (nm_utils_file_get_contents (-1, MY_RESOLV_CONF,
+	                                0, &contents, NULL, &error) < 0) {
+		_LOGT ("unsymlink: failed reading private resolv-conf from \"%s\": %s",
+		       MY_RESOLV_CONF, error->message);
+		return;
+	}
+
+	if (!nm_utils_file_set_contents (_PATH_RESCONF, contents, -1, 0644, &error)) {
+		_LOGT ("unsymlink: failed writing \"%s\": %s",
+		       _PATH_RESCONF, error->message);
+		return;
+	}
+
+	_LOGT ("unsymlink: update \"%s\" with content from \"%s\"", _PATH_RESCONF, MY_RESOLV_CONF);
+}
+
+static void
 compute_hash (NMDnsManager *self, const NMGlobalDnsConfig *global, guint8 buffer[HASH_LEN])
 {
 	NMDnsManagerPrivate *priv = NM_DNS_MANAGER_GET_PRIVATE (self);
@@ -1573,6 +1607,9 @@ nm_dns_manager_stop (NMDnsManager *self)
 			_LOGW ("could not commit DNS changes on shutdown: %s", error->message);
 			g_clear_error (&error);
 		}
+
+		update_resolv_conf_unsymlink (self);
+
 		priv->dns_touched = FALSE;
 	}
 
