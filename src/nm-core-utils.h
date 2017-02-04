@@ -325,6 +325,8 @@ guint8 *nm_utils_secret_key_read (gsize *out_key_len, GError **error);
 
 const char *nm_utils_get_boot_id (void);
 
+int nm_utils_file_is_immutable (const char *path);
+
 /* IPv6 Interface Identifer helpers */
 
 /**

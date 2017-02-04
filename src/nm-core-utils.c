@@ -33,8 +33,10 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <linux/if.h>
 #include <linux/if_infiniband.h>
+#include <linux/fs.h>
 #include <net/ethernet.h>
 
 #include "nm-utils.h"
@@ -3096,6 +3098,24 @@ nm_utils_get_boot_id (void)
 	}
 
 	return boot_id;
+}
+
+int
+nm_utils_file_is_immutable (const char *path)
+{
+	/* nm_auto_close preserves errno. Thus, in case of an error we properly
+	 * return a negative value. */
+	{
+		nm_auto_close int fd = -1;
+		int flags;
+
+		fd = open (path, O_RDONLY | O_CLOEXEC);
+		if (fd != -1) {
+			if (ioctl (fd, FS_IOC_GETFLAGS, &flags) != -1)
+				return NM_FLAGS_HAS (flags, FS_IMMUTABLE_FL);
+		}
+	}
+	return -errno;
 }
 
 /*****************************************************************************/
