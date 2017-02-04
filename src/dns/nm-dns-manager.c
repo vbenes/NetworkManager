@@ -33,8 +33,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <linux/fs.h>
-
 #include "nm-utils.h"
 #include "nm-core-internal.h"
 #include "nm-dns-manager.h"
@@ -1604,8 +1602,6 @@ static NMDnsManagerResolvConfManager
 _check_resconf_immutable (NMDnsManagerResolvConfManager rc_manager)
 {
 	struct stat st;
-	int fd, flags;
-	bool immutable = FALSE;
 
 	switch (rc_manager) {
 	case NM_DNS_MANAGER_RESOLV_CONF_MAN_UNKNOWN:
@@ -1639,13 +1635,9 @@ _check_resconf_immutable (NMDnsManagerResolvConfManager rc_manager)
 			}
 		}
 
-		fd = open (_PATH_RESCONF, O_RDONLY | O_CLOEXEC);
-		if (fd != -1) {
-			if (ioctl (fd, FS_IOC_GETFLAGS, &flags) != -1)
-				immutable = NM_FLAGS_HAS (flags, FS_IMMUTABLE_FL);
-			close (fd);
-		}
-		return immutable ? NM_DNS_MANAGER_RESOLV_CONF_MAN_IMMUTABLE : rc_manager;
+		if (nm_utils_file_is_immutable (_PATH_RESCONF) > 0)
+			return NM_DNS_MANAGER_RESOLV_CONF_MAN_IMMUTABLE;
+		return  rc_manager;
 	}
 }
 
